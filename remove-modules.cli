@@ -1,0 +1,6 @@
+# JBoss CLI script to install required modules
+# Usage: bin/jboss-cli.sh --file=/tmp/remove-modules.cli
+
+module remove --name=com.trivadis.mze.elytrondemo.security-common
+
+module remove --name=com.trivadis.mze.elytrondemo.custom-elytron

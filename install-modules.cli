@@ -1,0 +1,8 @@
+# JBoss CLI script to install required modules
+# Usage: bin/jboss-cli.sh --file=/tmp/install-modules.cli
+
+module add --name=com.trivadis.mze.elytrondemo.security-common --resources=/tmp/security-common-1.0-SNAPSHOT.jar
+
+module add --name=com.trivadis.mze.elytrondemo.custom-elytron \
+    --resources=/tmp/security-module-1.0-SNAPSHOT.jar \
+    --dependencies=com.trivadis.mze.elytrondemo.security-common,org.wildfly.security.elytron,org.wildfly.extension.elytron

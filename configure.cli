@@ -1,0 +1,65 @@
+# Batch script to configure our custom elytron security configuration with a custom realm and principal transformer
+# The security-common and security-module must already be installed as WildFly modules!
+# Usage: bin/jboss-cli.sh -c --file=/tmp/configure.cli
+
+
+# Start batching commands
+batch
+
+# Add our custom realm
+/subsystem=elytron/custom-realm=DemoCustomRealm:add( \
+    class-name=com.trivadis.mze.elytrondemo.security.realm.CustomSecurityRealm, \
+    module=com.trivadis.mze.elytrondemo.custom-elytron, \
+    configuration={ \
+      user.admin="demo", \
+      groups.admin="admin,user,guest", \
+      user.jane="doe", \
+      groups.jane="user,guest", \
+      user.guest="guest", \
+      groups.guest="guest" \
+       })
+
+# Add our custom principal transformer
+/subsystem=elytron/custom-principal-transformer=CustomPrincipalTransformer:add( \
+    class-name=com.trivadis.mze.elytrondemo.security.transformer.CustomPrincipalTransformer, \
+    module=com.trivadis.mze.elytrondemo.custom-elytron)
+
+
+# Add an elytron security domain that uses the custom realm
+/subsystem=elytron/security-domain=CustomRealmDomain:add( \
+    default-realm=DemoCustomRealm, \
+    permission-mapper=default-permission-mapper, \
+    pre-realm-principal-transformer=CustomPrincipalTransformer, \
+    security-event-listener=local-audit, \
+    realms=[{realm=DemoCustomRealm}])
+
+# Add an http-authentication-factory that will handle requests coming from the Web layer
+/subsystem=elytron/http-authentication-factory=customrealm-http-authentication:add( \
+    security-domain=CustomRealmDomain, \
+    http-server-mechanism-factory=global, \
+    mechanism-configurations=[{ \
+        mechanism-name=BASIC, \
+        mechanism-realm-configurations=[{realm-name="Custom Realm"}]}])
+
+# Make undertow use the http-authentication-factory for the quickstart application
+/subsystem=undertow/application-security-domain=customrealm-domain:add( \
+    http-authentication-factory=customrealm-http-authentication)
+
+# Add a sasl-authentication-factory that will handle requests from remote EJB clients
+/subsystem=elytron/sasl-authentication-factory=customrealm-sasl-authentication:add( \
+    sasl-server-factory=configured, \
+    security-domain=CustomRealmDomain, \
+    mechanism-configurations=[{mechanism-name=PLAIN}])
+
+# Update the http-remoting-connector to use the sasl-authentication-factory
+/subsystem=remoting/http-connector=http-remoting-connector:write-attribute( \
+    name=sasl-authentication-factory,value=customrealm-sasl-authentication)
+
+# Add security domain mapping in the ejb3 subsystem to enable elytron for the quickstart EJBs
+/subsystem=ejb3/application-security-domain=customrealm-domain:add(security-domain=CustomRealmDomain)
+
+# Run the batch commands
+run-batch
+
+# Reload the server configuration
+reload
